@@ -1,0 +1,72 @@
+baseURL: "https://duckdblab.com"
+title: "DuckDB Lab"
+theme: "paper"
+defaultContentLanguage: "zh"
+enableRobotsTXT: true
+enableEmoji: true
+hasCJKLanguage: true
+
+languages:
+  zh:
+    languageName: "中文"
+    languageCode: "zh-CN"
+    weight: 1
+    title: "DuckDB 实验室"
+    params:
+      description: "DuckDB 实战教程、数据分析技巧、变现指南"
+    menu:
+      main:
+        - identifier: home
+          name: "首页"
+          url: /zh/
+          weight: 10
+        - identifier: categories
+          name: "分类"
+          url: /zh/categories/
+          weight: 20
+        - identifier: tags
+          name: "标签"
+          url: /zh/tags/
+          weight: 30
+        - identifier: archive
+          name: "归档"
+          url: /zh/archives/
+          weight: 40
+
+  en:
+    languageName: "English"
+    languageCode: "en-US"
+    weight: 2
+    title: "DuckDB Lab"
+    params:
+      description: "DuckDB tutorials, data analysis tips, and monetization guides"
+    menu:
+      main:
+        - identifier: home
+          name: "Home"
+          url: /en/
+          weight: 10
+        - identifier: categories
+          name: "Categories"
+          url: /en/categories/
+          weight: 20
+        - identifier: tags
+          name: "Tags"
+          url: /en/tags/
+          weight: 30
+        - identifier: archive
+          name: "Archive"
+          url: /en/archives/
+          weight: 40
+
+params:
+  description: "DuckDB 实战教程、数据分析技巧、变现指南 — DuckDB tutorials, data analysis tips, and monetization guides"
+  author: "Ross Zhang"
+
+markup:
+  highlight:
+    noClasses: false
+
+taxonomies:
+  category: categories
+  tag: tags

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>性能对比 on DuckDB 实验室</title>
+    <link>https://duckdblab.com/tags/%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94/</link>
+    <description>Recent content in 性能对比 on DuckDB 实验室</description>
+    <generator>Hugo</generator>
+    <language>zh-CN</language>
+    <lastBuildDate>Thu, 07 May 2026 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://duckdblab.com/tags/%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>DuckDB vs Pandas 处理 10GB 数据：性能实测与选型指南</title>
+      <link>https://duckdblab.com/zh/posts/duckdb-vs-pandas-10gb-benchmark/</link>
+      <pubDate>Thu, 07 May 2026 00:00:00 +0000</pubDate>
+      <guid>https://duckdblab.com/zh/posts/duckdb-vs-pandas-10gb-benchmark/</guid>
+      <description>&lt;h2 id=&#34;引言&#34;&gt;引言&lt;/h2&gt;&#xA;&lt;p&gt;当数据量从几百 MB 增长到 &lt;strong&gt;10GB 级别&lt;/strong&gt;时，很多数据分析师会发现熟悉的 Pandas 开始&amp;quot;力不从心&amp;quot;——内存爆炸、运行缓慢、甚至直接崩溃。此时，&lt;strong&gt;DuckDB&lt;/strong&gt; 作为一个嵌入式 OLAP 数据库，正成为越来越多数据工作者的选择。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

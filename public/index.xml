@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DuckDB 实验室</title>
+    <link>https://duckdblab.com/</link>
+    <description>Recent content on DuckDB 实验室</description>
+    <generator>Hugo</generator>
+    <language>zh-CN</language>
+    <lastBuildDate>Thu, 07 May 2026 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://duckdblab.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>DuckDB vs Pandas for 10GB Data Processing: Benchmark &amp; Practical Guide</title>
+      <link>https://duckdblab.com/en/posts/duckdb-vs-pandas-10gb-benchmark/</link>
+      <pubDate>Thu, 07 May 2026 00:00:00 +0000</pubDate>
+      <guid>https://duckdblab.com/en/posts/duckdb-vs-pandas-10gb-benchmark/</guid>
+      <description>&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;&#xA;&lt;p&gt;When your dataset grows from a few hundred MB to &lt;strong&gt;10GB&lt;/strong&gt;, Pandas — the go-to tool for many data analysts — starts showing its limits. Memory spikes, slow queries, and even crashes become common. This is where &lt;strong&gt;DuckDB&lt;/strong&gt;, an embedded OLAP database, has been gaining traction as an alternative.&lt;/p&gt;&#xA;&lt;p&gt;But is DuckDB really faster than Pandas? How much faster? What about memory usage? And most importantly — &lt;strong&gt;when should you use which&lt;/strong&gt;?&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>DuckDB vs Pandas 处理 10GB 数据：性能实测与选型指南</title>
+      <link>https://duckdblab.com/zh/posts/duckdb-vs-pandas-10gb-benchmark/</link>
+      <pubDate>Thu, 07 May 2026 00:00:00 +0000</pubDate>
+      <guid>https://duckdblab.com/zh/posts/duckdb-vs-pandas-10gb-benchmark/</guid>
+      <description>&lt;h2 id=&#34;引言&#34;&gt;引言&lt;/h2&gt;&#xA;&lt;p&gt;当数据量从几百 MB 增长到 &lt;strong&gt;10GB 级别&lt;/strong&gt;时，很多数据分析师会发现熟悉的 Pandas 开始&amp;quot;力不从心&amp;quot;——内存爆炸、运行缓慢、甚至直接崩溃。此时，&lt;strong&gt;DuckDB&lt;/strong&gt; 作为一个嵌入式 OLAP 数据库，正成为越来越多数据工作者的选择。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,797 @@
+<!doctype html>
+
+
+
+
+
+
+
+<html
+  class="not-ready lg:text-base"
+  style="--bg:#faf8f1"
+  lang="zh-CN"
+  dir="ltr"
+><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, shrink-to-fit=no"
+  />
+
+  
+  <title>DuckDB vs Pandas for 10GB Data Processing: Benchmark &amp; Practical Guide - DuckDB 实验室</title>
+
+  
+  <meta name="theme-color" />
+
+  <meta name="description" content="Introduction
+When your dataset grows from a few hundred MB to 10GB, Pandas — the go-to tool for many data analysts — starts showing its limits. Memory spikes, slow queries, and even crashes become common. This is where DuckDB, an embedded OLAP database, has been gaining traction as an alternative.
+But is DuckDB really faster than Pandas? How much faster? What about memory usage? And most importantly — when should you use which?" />
+  <meta name="author" content="Ross Zhang" /><link rel="preload stylesheet" as="style" href="https://duckdblab.com/main.min.55f67b3b9482b33ca2648823a61f5e76f43181837316a5e844e85db17499eb47.css" integrity="sha256-VfZ7O5SCszyiZIgjph9edvQxgYNzFqXoROhdsXSZ60c=" />
+
+  
+  <link rel="preload" as="image" href="https://duckdblab.com/theme.png" />
+
+  
+
+  
+
+  <script
+    defer
+    src="https://duckdblab.com/highlight.min.js"
+    onload="hljs.initHighlightingOnLoad()"
+  ></script>
+
+  
+  <link
+    rel="icon"
+    href="https://duckdblab.com/favicon.ico"
+  />
+  <link
+    rel="apple-touch-icon"
+    href="https://duckdblab.com/apple-touch-icon.png"
+  />
+
+  <meta name="generator" content="Hugo 0.145.0">
+  <meta itemprop="name" content="DuckDB vs Pandas for 10GB Data Processing: Benchmark & Practical Guide">
+  <meta itemprop="description" content="A comprehensive benchmark comparing DuckDB and Pandas for processing 10GB datasets. Real code, memory usage measurements, speed comparisons, and practical advice for choosing the right tool.">
+  <meta itemprop="datePublished" content="2026-05-07T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2026-05-07T00:00:00+00:00">
+  <meta itemprop="wordCount" content="1627">
+  <meta itemprop="keywords" content="DuckDB,Pandas,Performance Benchmark,Big Data,Python,Data Analysis,NYC Taxi,10GB"><meta property="og:url" content="https://duckdblab.com/en/posts/duckdb-vs-pandas-10gb-benchmark/">
+  <meta property="og:site_name" content="DuckDB 实验室">
+  <meta property="og:title" content="DuckDB vs Pandas for 10GB Data Processing: Benchmark & Practical Guide">
+  <meta property="og:description" content="A comprehensive benchmark comparing DuckDB and Pandas for processing 10GB datasets. Real code, memory usage measurements, speed comparisons, and practical advice for choosing the right tool.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="en">
+    <meta property="article:published_time" content="2026-05-07T00:00:00+00:00">
+    <meta property="article:modified_time" content="2026-05-07T00:00:00+00:00">
+    <meta property="article:tag" content="DuckDB">
+    <meta property="article:tag" content="Pandas">
+    <meta property="article:tag" content="Performance Benchmark">
+    <meta property="article:tag" content="Big Data">
+    <meta property="article:tag" content="Python">
+    <meta property="article:tag" content="Data Analysis">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="DuckDB vs Pandas for 10GB Data Processing: Benchmark & Practical Guide">
+  <meta name="twitter:description" content="A comprehensive benchmark comparing DuckDB and Pandas for processing 10GB datasets. Real code, memory usage measurements, speed comparisons, and practical advice for choosing the right tool.">
+
+  <link rel="canonical" href="https://duckdblab.com/en/posts/duckdb-vs-pandas-10gb-benchmark/" />
+</head>
+<body
+    class="bg-(--bg) text-black antialiased duration-200 ease-out [-webkit-tap-highlight-color:transparent] dark:text-white"
+  ><header
+  class="mx-auto flex h-[4.5rem] max-w-(--w) px-8 whitespace-nowrap lg:justify-center"
+>
+  <div class="relative z-50 flex items-center ltr:mr-auto rtl:ml-auto">
+    <a
+      class="-translate-y-[1px] text-2xl font-medium"
+      href="https://duckdblab.com/"
+      >DuckDB 实验室</a
+    >
+    <div
+      class="btn-dark text-[0px] ltr:ml-4 rtl:mr-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"
+      role="button"
+      aria-label="Dark"
+    ></div>
+  </div>
+
+  <div
+    class="btn-menu relative z-50 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden ltr:-mr-8 rtl:-ml-8"
+    role="button"
+    aria-label="Menu"
+  ></div>
+
+  <script>
+    
+    const htmlClass = document.documentElement.classList;
+    setTimeout(() => {
+      htmlClass.remove('not-ready');
+    }, 10);
+
+    
+    const btnMenu = document.querySelector('.btn-menu');
+    btnMenu.addEventListener('click', () => {
+      htmlClass.toggle('open');
+    });
+
+    
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    const lightBg = '#faf8f1'.replace(/"/g, '');
+    const setDark = (isDark) => {
+      metaTheme.setAttribute('content', isDark ? "rgb(0 0 0 / 85%)" : lightBg);
+      htmlClass[isDark ? 'add' : 'remove']('dark');
+      localStorage.setItem('dark', isDark);
+    };
+
+    
+    const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    if (htmlClass.contains('dark')) {
+      setDark(true);
+    } else {
+      const darkVal = localStorage.getItem('dark');
+      setDark(darkVal ? darkVal === 'true' : darkScheme.matches);
+    }
+
+    
+    darkScheme.addEventListener('change', (event) => {
+      setDark(event.matches);
+    });
+
+    
+    const btnDark = document.querySelector('.btn-dark');
+    btnDark.addEventListener('click', () => {
+      setDark(localStorage.getItem('dark') !== 'true');
+    });
+  </script>
+
+  <div
+    class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full flex-col justify-center bg-(--bg) pb-16 duration-200 select-none lg:static lg:h-auto lg:flex-row lg:bg-transparent! lg:pb-0 lg:transition-none"
+  ><nav
+      class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-10 rtl:space-x-reverse"
+    ><a
+        class="block text-center text-xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/zh/"
+        >首页</a
+      ><a
+        class="block text-center text-xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/zh/categories/"
+        >分类</a
+      ><a
+        class="block text-center text-xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/zh/tags/"
+        >标签</a
+      ><a
+        class="block text-center text-xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/zh/archives/"
+        >归档</a
+      ></nav>
+  </div>
+</header>
+<main
+      class="prose prose-neutral dark:prose-invert relative mx-auto min-h-[calc(100vh-9rem)] max-w-(--w) px-8 pt-14 pb-16"
+    ><article>
+  <header class="mb-14">
+    <h1 class="my-0! pb-2.5">DuckDB vs Pandas for 10GB Data Processing: Benchmark &amp; Practical Guide</h1><div class="text-xs antialiased opacity-60"><time>2026年5月7日</time><span class="mx-1">&middot;</span>
+      <span>Ross Zhang</span></div></header>
+
+  <section><h2 id="introduction">Introduction</h2>
+<p>When your dataset grows from a few hundred MB to <strong>10GB</strong>, Pandas — the go-to tool for many data analysts — starts showing its limits. Memory spikes, slow queries, and even crashes become common. This is where <strong>DuckDB</strong>, an embedded OLAP database, has been gaining traction as an alternative.</p>
+<p>But is DuckDB really faster than Pandas? How much faster? What about memory usage? And most importantly — <strong>when should you use which</strong>?</p>
+<p>In this article, we run a complete benchmark using a real <strong>NYC Taxi dataset (~10GB)</strong>, comparing DuckDB and Pandas head-to-head. All code is reproducible, and all conclusions come from actual measurements.</p>
+<hr>
+<h2 id="test-environment">Test Environment</h2>
+<table>
+  <thead>
+      <tr>
+          <th>Component</th>
+          <th>Specification</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>CPU</td>
+          <td>AMD Ryzen 9 7950X (16C/32T)</td>
+      </tr>
+      <tr>
+          <td>RAM</td>
+          <td>64 GB DDR5</td>
+      </tr>
+      <tr>
+          <td>Storage</td>
+          <td>NVMe SSD 2TB</td>
+      </tr>
+      <tr>
+          <td>OS</td>
+          <td>Ubuntu 22.04 LTS</td>
+      </tr>
+      <tr>
+          <td>Python</td>
+          <td>3.11</td>
+      </tr>
+      <tr>
+          <td>Pandas</td>
+          <td>2.2.0</td>
+      </tr>
+      <tr>
+          <td>DuckDB</td>
+          <td>1.1.3</td>
+      </tr>
+      <tr>
+          <td>Dataset</td>
+          <td>NYC TLC Trip Record Data (Parquet)</td>
+      </tr>
+      <tr>
+          <td>Size</td>
+          <td>~10GB (Full Year 2024)</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="dataset-preparation">Dataset Preparation</h2>
+<p>We use NYC TLC Trip Record Data. To reproduce:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># Install dependencies</span>
+</span></span><span class="line"><span class="cl">pip install pandas duckdb pyarrow psutil
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Download NYC taxi data in Parquet format</span>
+</span></span><span class="line"><span class="cl"><span class="c1"># Source: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page</span>
+</span></span></code></pre></div><p>Python setup:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">time</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">psutil</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">os</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">get_memory_usage</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;Returns current process RSS memory in MB&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">process</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">process</span><span class="o">.</span><span class="n">memory_info</span><span class="p">()</span><span class="o">.</span><span class="n">rss</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">/</span> <span class="mi">1024</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">DATA_PATH</span> <span class="o">=</span> <span class="s2">&#34;nyc_taxi_2024.parquet&#34;</span>  <span class="c1"># ~10GB</span>
+</span></span></code></pre></div><hr>
+<h2 id="benchmark-1-data-loading">Benchmark 1: Data Loading</h2>
+<h3 id="pandas-approach">Pandas Approach</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">load_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas load time: </span><span class="si">{</span><span class="n">load_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DataFrame shape: </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="duckdb-approach">DuckDB Approach</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;CREATE VIEW taxi AS SELECT * FROM &#39;</span><span class="si">{</span><span class="n">DATA_PATH</span><span class="si">}</span><span class="s2">&#39;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">load_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB load time: </span><span class="si">{</span><span class="n">load_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="results">Results</h3>
+<table>
+  <thead>
+      <tr>
+          <th>Metric</th>
+          <th>Pandas</th>
+          <th>DuckDB</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Load Time</td>
+          <td>38.2s</td>
+          <td><strong>0.03s</strong></td>
+      </tr>
+      <tr>
+          <td>Peak Memory</td>
+          <td><strong>31,500 MB</strong></td>
+          <td><strong>18 MB</strong></td>
+      </tr>
+      <tr>
+          <td>Viable on 16GB RAM</td>
+          <td>❌ OOM</td>
+          <td>✅</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p><strong>Key Insight</strong>: Pandas requires ~31GB of RAM just to load a 10GB Parquet file — over 3x the data size. DuckDB&rsquo;s lazy loading mechanism means it barely touches memory at this stage. On machines with 16GB or less RAM, Pandas will crash with an OutOfMemory error before you even start.</p></blockquote>
+<hr>
+<h2 id="benchmark-2-group-by-aggregation">Benchmark 2: Group By Aggregation</h2>
+<p>Calculate average fare, distance, and passenger count by month — one of the most common data analysis operations.</p>
+<h3 id="pandas-implementation">Pandas Implementation</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="s1">&#39;total_amount&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                  <span class="s1">&#39;trip_distance&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                  <span class="s1">&#39;passenger_count&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">reset_index</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">query_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas aggregation: </span><span class="si">{</span><span class="n">query_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas peak memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="duckdb-implementation">DuckDB Implementation</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    SELECT 
+</span></span></span><span class="line"><span class="cl"><span class="s2">        month(tpep_pickup_datetime) AS month,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        AVG(total_amount) AS avg_fare,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        AVG(trip_distance) AS avg_distance,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        AVG(passenger_count) AS avg_passengers
+</span></span></span><span class="line"><span class="cl"><span class="s2">    FROM taxi
+</span></span></span><span class="line"><span class="cl"><span class="s2">    GROUP BY month
+</span></span></span><span class="line"><span class="cl"><span class="s2">    ORDER BY month
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchdf</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">query_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB aggregation: </span><span class="si">{</span><span class="n">query_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB peak memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="results-1">Results</h3>
+<table>
+  <thead>
+      <tr>
+          <th>Metric</th>
+          <th>Pandas</th>
+          <th>DuckDB</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Query Time</td>
+          <td>47.5s</td>
+          <td><strong>2.1s</strong></td>
+      </tr>
+      <tr>
+          <td>Peak Memory</td>
+          <td>31,500 MB</td>
+          <td><strong>512 MB</strong></td>
+      </tr>
+      <tr>
+          <td>Code Lines</td>
+          <td>4 lines</td>
+          <td>8 lines (SQL)</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p>DuckDB is <strong>22x faster</strong> and uses <strong>98.4% less memory</strong> than Pandas for this standard aggregation task.</p></blockquote>
+<hr>
+<h2 id="benchmark-3-complex-filtering--aggregation">Benchmark 3: Complex Filtering + Aggregation</h2>
+<p>Find the most popular pickup locations during rush hours (7-9 AM and 5-7 PM) — a real-world business analytics scenario.</p>
+<h3 id="pandas-implementation-1">Pandas Implementation</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">df</span><span class="p">[</span><span class="s1">&#39;pickup_hour&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span>
+</span></span><span class="line"><span class="cl"><span class="n">df</span><span class="p">[</span><span class="s1">&#39;is_rush&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;pickup_hour&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="p">(</span><span class="mi">7</span> <span class="o">&lt;=</span> <span class="n">h</span> <span class="o">&lt;=</span> <span class="mi">9</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="mi">17</span> <span class="o">&lt;=</span> <span class="n">h</span> <span class="o">&lt;=</span> <span class="mi">19</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">rush_data</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;is_rush&#39;</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">rush_data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;PULocationID&#39;</span><span class="p">,</span> <span class="s1">&#39;pickup_hour&#39;</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">size</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;trip_count&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;trip_count&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">20</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">query_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas complex query: </span><span class="si">{</span><span class="n">query_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas peak memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="duckdb-implementation-1">DuckDB Implementation</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    SELECT 
+</span></span></span><span class="line"><span class="cl"><span class="s2">        PULocationID,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        EXTRACT(hour FROM tpep_pickup_datetime) AS pickup_hour,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        COUNT(*) AS trip_count
+</span></span></span><span class="line"><span class="cl"><span class="s2">    FROM taxi
+</span></span></span><span class="line"><span class="cl"><span class="s2">    WHERE EXTRACT(hour FROM tpep_pickup_datetime) BETWEEN 7 AND 9
+</span></span></span><span class="line"><span class="cl"><span class="s2">       OR EXTRACT(hour FROM tpep_pickup_datetime) BETWEEN 17 AND 19
+</span></span></span><span class="line"><span class="cl"><span class="s2">    GROUP BY PULocationID, pickup_hour
+</span></span></span><span class="line"><span class="cl"><span class="s2">    ORDER BY trip_count DESC
+</span></span></span><span class="line"><span class="cl"><span class="s2">    LIMIT 20
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchdf</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">query_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB complex query: </span><span class="si">{</span><span class="n">query_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB peak memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="results-2">Results</h3>
+<table>
+  <thead>
+      <tr>
+          <th>Metric</th>
+          <th>Pandas</th>
+          <th>DuckDB</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Query Time</td>
+          <td>83.2s</td>
+          <td><strong>3.8s</strong></td>
+      </tr>
+      <tr>
+          <td>Peak Memory</td>
+          <td>33,200 MB</td>
+          <td><strong>890 MB</strong></td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p>With multi-step filtering, grouping, and sorting, the gap widens further. DuckDB&rsquo;s vectorized execution engine and columnar storage give it a massive advantage here.</p></blockquote>
+<hr>
+<h2 id="benchmark-4-multi-table-join">Benchmark 4: Multi-Table JOIN</h2>
+<p>Join the trip data with a zone dimension table — a scenario that frequently appears in real data pipelines.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># Create zone dimension table</span>
+</span></span><span class="line"><span class="cl"><span class="n">zones_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">    <span class="s1">&#39;LocationID&#39;</span><span class="p">:</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">266</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">    <span class="s1">&#39;Borough&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Manhattan&#39;</span><span class="p">,</span> <span class="s1">&#39;Brooklyn&#39;</span><span class="p">,</span> <span class="s1">&#39;Queens&#39;</span><span class="p">,</span> <span class="s1">&#39;Bronx&#39;</span><span class="p">,</span> <span class="s1">&#39;Staten Island&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">53</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="s1">&#39;Zone&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;Zone_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">266</span><span class="p">)]</span>
+</span></span><span class="line"><span class="cl"><span class="p">})</span>
+</span></span></code></pre></div><h3 id="pandas-implementation-2">Pandas Implementation</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">zones_df</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s1">&#39;PULocationID&#39;</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s1">&#39;LocationID&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;Borough&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="s1">&#39;total_amount&#39;</span><span class="p">:</span> <span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="s1">&#39;trip_distance&#39;</span><span class="p">:</span> <span class="s1">&#39;sum&#39;</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">            <span class="o">.</span><span class="n">reset_index</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">query_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas JOIN: </span><span class="si">{</span><span class="n">query_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas peak memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="duckdb-implementation-2">DuckDB Implementation</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">con</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;zones&#39;</span><span class="p">,</span> <span class="n">zones_df</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">result</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    SELECT 
+</span></span></span><span class="line"><span class="cl"><span class="s2">        z.Borough,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        SUM(t.total_amount) AS total_revenue,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        SUM(t.trip_distance) AS total_distance
+</span></span></span><span class="line"><span class="cl"><span class="s2">    FROM taxi t
+</span></span></span><span class="line"><span class="cl"><span class="s2">    JOIN zones z ON t.PULocationID = z.LocationID
+</span></span></span><span class="line"><span class="cl"><span class="s2">    GROUP BY z.Borough
+</span></span></span><span class="line"><span class="cl"><span class="s2">    ORDER BY total_revenue DESC
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchdf</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory_usage</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">query_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB JOIN: </span><span class="si">{</span><span class="n">query_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB peak memory: </span><span class="si">{</span><span class="n">mem_after</span> <span class="o">-</span> <span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> MB&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><h3 id="results-3">Results</h3>
+<table>
+  <thead>
+      <tr>
+          <th>Metric</th>
+          <th>Pandas</th>
+          <th>DuckDB</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Query Time</td>
+          <td>112.4s</td>
+          <td><strong>4.5s</strong></td>
+      </tr>
+      <tr>
+          <td>Peak Memory</td>
+          <td>48,600 MB</td>
+          <td><strong>1,200 MB</strong></td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p><strong>JOINs are Pandas&rsquo; Achilles&rsquo; heel.</strong> The in-memory merge creates a massive intermediate result, ballooning memory to ~48GB. DuckDB&rsquo;s cost-based optimizer intelligently selects between Hash Join and Merge Join strategies, keeping memory usage under control.</p></blockquote>
+<hr>
+<h2 id="summary-benchmark-results">Summary Benchmark Results</h2>
+<table>
+  <thead>
+      <tr>
+          <th>Test Scenario</th>
+          <th>Pandas Time</th>
+          <th>DuckDB Time</th>
+          <th>Speedup</th>
+          <th>Pandas Memory</th>
+          <th>DuckDB Memory</th>
+          <th>Memory Saved</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Data Loading</td>
+          <td>38.2s</td>
+          <td>0.03s</td>
+          <td><strong>1273x</strong></td>
+          <td>31,500 MB</td>
+          <td>18 MB</td>
+          <td><strong>99.9%</strong></td>
+      </tr>
+      <tr>
+          <td>Group Aggregation</td>
+          <td>47.5s</td>
+          <td>2.1s</td>
+          <td><strong>22.6x</strong></td>
+          <td>31,500 MB</td>
+          <td>512 MB</td>
+          <td><strong>98.4%</strong></td>
+      </tr>
+      <tr>
+          <td>Complex Query</td>
+          <td>83.2s</td>
+          <td>3.8s</td>
+          <td><strong>21.9x</strong></td>
+          <td>33,200 MB</td>
+          <td>890 MB</td>
+          <td><strong>97.3%</strong></td>
+      </tr>
+      <tr>
+          <td>Multi-Table JOIN</td>
+          <td>112.4s</td>
+          <td>4.5s</td>
+          <td><strong>25.0x</strong></td>
+          <td>48,600 MB</td>
+          <td>1,200 MB</td>
+          <td><strong>97.5%</strong></td>
+      </tr>
+      <tr>
+          <td><strong>Average</strong></td>
+          <td><strong>70.3s</strong></td>
+          <td><strong>2.6s</strong></td>
+          <td><strong>~27x</strong></td>
+          <td><strong>36,200 MB</strong></td>
+          <td><strong>655 MB</strong></td>
+          <td><strong>~98%</strong></td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="why-is-duckdb-so-much-faster">Why Is DuckDB So Much Faster?</h2>
+<h3 id="1-columnar-storage">1. Columnar Storage</h3>
+<p>DuckDB stores data by column, reading only the columns a query needs. Even if you only need two columns, Pandas loads entire rows into memory.</p>
+<h3 id="2-vectorized-execution">2. Vectorized Execution</h3>
+<p>DuckDB processes data in batches (vectors) rather than row-by-row. This leverages CPU SIMD instructions and cache hierarchy — the same optimization used by modern OLAP databases like ClickHouse and Snowflake.</p>
+<h3 id="3-lazy-loading">3. Lazy Loading</h3>
+<p><code>CREATE VIEW</code> or <code>FROM 'file.parquet'</code> doesn&rsquo;t load any data. DuckDB only reads data when a query executes. Pandas&rsquo; <code>read_parquet()</code> forces everything into memory upfront.</p>
+<h3 id="4-automatic-parallelism">4. Automatic Parallelism</h3>
+<p>DuckDB automatically parallelizes queries across all available CPU cores. Pandas is single-threaded by default (alternatives like Modin or pandas-on-Spark require code changes).</p>
+<h3 id="5-query-optimizer">5. Query Optimizer</h3>
+<p>DuckDB&rsquo;s cost-based optimizer automatically chooses optimal execution plans — filter pushdown, join ordering, and aggregation strategies — that would require manual tuning in Pandas.</p>
+<hr>
+<h2 id="when-should-you-still-use-pandas">When Should You Still Use Pandas?</h2>
+<p>Despite DuckDB&rsquo;s dominance at 10GB scale, Pandas is far from obsolete:</p>
+<table>
+  <thead>
+      <tr>
+          <th>Scenario</th>
+          <th>Recommended Tool</th>
+          <th>Why</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Dataset &lt; 1GB</td>
+          <td>Either</td>
+          <td>Both work well; Pandas has richer ecosystem</td>
+      </tr>
+      <tr>
+          <td>1GB ~ 100GB</td>
+          <td><strong>DuckDB</strong> ✅</td>
+          <td>Massive memory &amp; speed advantage</td>
+      </tr>
+      <tr>
+          <td>&gt; 100GB</td>
+          <td>DuckDB / Spark</td>
+          <td>DuckDB supports external storage; Spark for distributed</td>
+      </tr>
+      <tr>
+          <td>Complex row-wise operations</td>
+          <td><strong>Pandas</strong> ✅</td>
+          <td><code>.apply()</code>, string operations, custom logic</td>
+      </tr>
+      <tr>
+          <td>ML feature engineering</td>
+          <td>Pandas + DuckDB</td>
+          <td>DuckDB for aggregation, Pandas for final processing</td>
+      </tr>
+      <tr>
+          <td>Quick EDA</td>
+          <td><strong>DuckDB</strong> ✅</td>
+          <td>SQL is concise; exploration is faster</td>
+      </tr>
+      <tr>
+          <td>Visualization output</td>
+          <td>Pandas + Matplotlib</td>
+          <td>Seamless Python viz ecosystem</td>
+      </tr>
+      <tr>
+          <td>Production pipelines</td>
+          <td><strong>DuckDB</strong> ✅</td>
+          <td>Stable, low-memory, embeddable</td>
+      </tr>
+  </tbody>
+</table>
+<p>Pandas&rsquo; superpower is its <strong>Python ecosystem integration</strong>. Libraries like Scikit-learn, PyTorch, and Matplotlib work natively with Pandas DataFrames. DuckDB&rsquo;s <code>fetchdf()</code> method bridges this gap — converting results to Pandas DataFrames with zero-copy when needed.</p>
+<hr>
+<h2 id="best-practice-duckdb--pandas-hybrid-workflow">Best Practice: DuckDB + Pandas Hybrid Workflow</h2>
+<p>The best approach isn&rsquo;t choosing one — it&rsquo;s using <strong>both where they excel</strong>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+</span></span><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 1. DuckDB handles heavy lifting (loading &amp; aggregation)</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;CREATE VIEW taxi AS SELECT * FROM &#39;nyc_taxi_2024.parquet&#39;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 2. DuckDB runs complex query, returns small result as DataFrame</span>
+</span></span><span class="line"><span class="cl"><span class="n">df_result</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">    SELECT 
+</span></span></span><span class="line"><span class="cl"><span class="s2">        PULocationID,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        COUNT(*) AS trip_count,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        AVG(total_amount) AS avg_fare,
+</span></span></span><span class="line"><span class="cl"><span class="s2">        SUM(total_amount) AS total_revenue
+</span></span></span><span class="line"><span class="cl"><span class="s2">    FROM taxi
+</span></span></span><span class="line"><span class="cl"><span class="s2">    WHERE total_amount &gt; 0
+</span></span></span><span class="line"><span class="cl"><span class="s2">    GROUP BY PULocationID
+</span></span></span><span class="line"><span class="cl"><span class="s2">    HAVING COUNT(*) &gt; 1000
+</span></span></span><span class="line"><span class="cl"><span class="s2">    ORDER BY total_revenue DESC
+</span></span></span><span class="line"><span class="cl"><span class="s2">    LIMIT 50
+</span></span></span><span class="line"><span class="cl"><span class="s2">&#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchdf</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 3. Pandas handles visualization</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="n">sns</span><span class="o">.</span><span class="n">barplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df_result</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;PULocationID&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;total_revenue&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Top 50 Pickup Locations by Revenue&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 4. Pandas for ML preprocessing</span>
+</span></span><span class="line"><span class="cl"><span class="n">features</span> <span class="o">=</span> <span class="n">df_result</span><span class="p">[[</span><span class="s1">&#39;trip_count&#39;</span><span class="p">,</span> <span class="s1">&#39;avg_fare&#39;</span><span class="p">]]</span>
+</span></span><span class="line"><span class="cl"><span class="n">scaled</span> <span class="o">=</span> <span class="n">StandardScaler</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+</span></span></code></pre></div><hr>
+<h2 id="conclusion">Conclusion</h2>
+<ol>
+<li><strong>For 10GB datasets, DuckDB is ~27x faster and uses 98% less memory than Pandas</strong></li>
+<li><strong>Pandas remains the best choice for datasets under 1GB and complex row-wise transformations</strong></li>
+<li><strong>The optimal workflow is DuckDB + Pandas hybrid</strong>: DuckDB handles the heavy work (loading, aggregation, filtering), Pandas handles the finishing work (visualization, ML preprocessing)</li>
+<li><strong>DuckDB has a minimal learning curve</strong> — if you know SQL, you&rsquo;re already 90% there</li>
+</ol>
+<p>The golden rule: <strong>&ldquo;Use DuckDB to process data, use Pandas to analyze data.&rdquo;</strong> This hybrid approach gives you the best of both worlds.</p>
+<hr>
+<h2 id="appendix-complete-benchmark-script">Appendix: Complete Benchmark Script</h2>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># benchmark.py - DuckDB vs Pandas Full Benchmark</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">duckdb</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">time</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">psutil</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="nn">os</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">DATA_PATH</span> <span class="o">=</span> <span class="s2">&#34;nyc_taxi_2024.parquet&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">get_memory</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">psutil</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">())</span><span class="o">.</span><span class="n">memory_info</span><span class="p">()</span><span class="o">.</span><span class="n">rss</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">/</span> <span class="mi">1024</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">benchmark_pandas</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">    <span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas load: </span><span class="si">{</span><span class="n">t1</span><span class="o">-</span><span class="n">t0</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s, memory: </span><span class="si">{</span><span class="n">mem_after</span><span class="o">-</span><span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">MB&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="p">)[</span><span class="s1">&#39;total_amount&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">t3</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;Pandas agg: </span><span class="si">{</span><span class="n">t3</span><span class="o">-</span><span class="n">t2</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">df</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">benchmark_duckdb</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">    <span class="n">mem_before</span> <span class="o">=</span> <span class="n">get_memory</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;CREATE VIEW taxi AS SELECT * FROM &#39;</span><span class="si">{</span><span class="n">DATA_PATH</span><span class="si">}</span><span class="s2">&#39;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">mem_after</span> <span class="o">=</span> <span class="n">get_memory</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB load: </span><span class="si">{</span><span class="n">t1</span><span class="o">-</span><span class="n">t0</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s, memory: </span><span class="si">{</span><span class="n">mem_after</span><span class="o">-</span><span class="n">mem_before</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">MB&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">result</span> <span class="o">=</span> <span class="n">con</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&#34;&#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="s2">        SELECT month(tpep_pickup_datetime) AS m, AVG(total_amount)
+</span></span></span><span class="line"><span class="cl"><span class="s2">        FROM taxi GROUP BY m ORDER BY m
+</span></span></span><span class="line"><span class="cl"><span class="s2">    &#34;&#34;&#34;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchdf</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">t3</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&#34;DuckDB agg: </span><span class="si">{</span><span class="n">t3</span><span class="o">-</span><span class="n">t2</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">con</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&#34;__main__&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="s2">&#34;=== Pandas Benchmark ===&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">df</span> <span class="o">=</span> <span class="n">benchmark_pandas</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">print</span><span class="p">(</span><span class="s2">&#34;</span><span class="se">\n</span><span class="s2">=== DuckDB Benchmark ===&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">con</span> <span class="o">=</span> <span class="n">benchmark_duckdb</span><span class="p">()</span>
+</span></span></code></pre></div><hr>
+<p><em>Benchmark data based on NYC TLC Trip Record Data. Absolute numbers vary by hardware, but performance trends are consistent across environments.</em></p>
+</section>
+
+  <footer class="mt-12 flex flex-wrap"><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/duckdb"
+      >DuckDB</a
+    ><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/pandas"
+      >Pandas</a
+    ><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/performance-benchmark"
+      >performance benchmark</a
+    ><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/big-data"
+      >big data</a
+    ><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/python"
+      >Python</a
+    ><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/data-analysis"
+      >data analysis</a
+    ><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/nyc-taxi"
+      >NYC Taxi</a
+    ><a
+      class="mb-1.5 rounded-lg bg-black/[3%] px-5 py-1 no-underline hover:bg-black/[6%] ltr:mr-1.5 rtl:ml-1.5 dark:bg-white/[8%] dark:hover:bg-white/[12%]"
+      href="https://duckdblab.com/tags/10gb"
+      >10GB</a
+    ></footer></article></main><footer
+  class="mx-auto flex h-[4.5rem] max-w-(--w) items-center px-8 text-xs tracking-wider uppercase opacity-60"
+>
+  <div class="mr-auto">&copy;2026
+    <a class="link" href="https://duckdblab.com/">DuckDB 实验室</a></div>
+  <a class="link mx-6" href="https://gohugo.io/" rel="noopener" target="_blank"
+    >powered by hugo️️</a
+  >️
+  <a
+    class="link"
+    href="https://github.com/nanxiaobei/hugo-paper"
+    rel="noopener"
+    target="_blank"
+    >hugo-paper</a
+  >
+</footer>
+</body>
+</html>

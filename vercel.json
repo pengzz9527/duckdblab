@@ -1,0 +1,6 @@
+{
+  "buildCommand": "hugo --gc --minify",
+  "outputDirectory": "public",
+  "installCommand": "apt-get update && apt-get install -y hugo || true",
+  "framework": null
+}
