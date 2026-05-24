@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /*index.xml$
+Disallow: /*/index.xml$
+
+Sitemap: {{ "sitemap.xml" | absURL }}

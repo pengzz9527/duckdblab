@@ -1,0 +1,4 @@
+<!-- 标签/分类页禁止索引 - 薄内容 -->
+{{- if or (eq .Kind "taxonomy") (eq .Kind "term") -}}
+<meta name="robots" content="noindex,follow">
+{{- end -}}
