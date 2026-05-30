@@ -396,10 +396,21 @@ features = df_result[['trip_count', 'avg_fare']]
 scaled = StandardScaler().fit_transform(features)
 ```
 
+
+## Related Reading
+
+For in-depth DuckDB tutorials and advanced guides, check out these resources on [DuckDB Lab](https://duckdblab.org/en/):
+
+- [DuckDB Python Guide: From Basics to Advanced](https://duckdblab.org/en/post/duckdb-python-guide/) — Complete DuckDB Python API reference
+- [DuckDB vs Pandas: When to Replace Your ETL Workflow](https://duckdblab.org/en/post/duckdb-replace-pandas-etl-workflow/) — Practical ETL migration guide
+- [DuckDB Performance Tuning: 5 Tips for 10x Speed](https://duckdblab.org/en/post/duckdb-performance-tuning-5-tips/) — Optimizing DuckDB queries
+- [DuckDB Memory Management & Performance Tuning](https://duckdblab.org/en/post/duckdb-memory-management-performance-tuning/) — Deep dive into DuckDB memory internals
+- [DuckDB Introduction: Core Advantages](https://duckdblab.org/en/post/duckdb-intro-advantages/) — Why DuckDB stands out
+- [DuckDB Data Cleaning & ETL Guide](https://duckdblab.org/en/post/duckdb-data-cleaning-etl/) — Using DuckDB for data pipelines
+
 ---
 
 ## Conclusion
-
 1. **For 10GB datasets, DuckDB is ~27x faster and uses 98% less memory than Pandas**
 2. **Pandas remains the best choice for datasets under 1GB and complex row-wise transformations**
 3. **The optimal workflow is DuckDB + Pandas hybrid**: DuckDB handles the heavy work (loading, aggregation, filtering), Pandas handles the finishing work (visualization, ML preprocessing)

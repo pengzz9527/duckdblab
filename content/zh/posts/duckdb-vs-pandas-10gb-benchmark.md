@@ -408,10 +408,21 @@ features = df_result[['trip_count', 'avg_fare']]
 scaled = StandardScaler().fit_transform(features)
 ```
 
+
+## 延伸阅读
+
+想要更深入地学习 DuckDB？欢迎访问 [DuckDB Lab](https://duckdblab.org/zh/)，这里有丰富的教程和指南：
+
+- [DuckDB Python 使用指南](https://duckdblab.org/zh/post/duckdb-python-guide/) — DuckDB Python API 完整参考
+- [用 DuckDB 替代 Pandas 的 ETL 工作流](https://duckdblab.org/zh/post/duckdb-replace-pandas-etl-workflow/) — 实用的迁移指南
+- [DuckDB 性能调优 5 个技巧](https://duckdblab.org/zh/post/duckdb-performance-tuning-5-tips/) — 让你的查询快 10 倍
+- [DuckDB 内存管理与性能优化](https://duckdblab.org/zh/post/duckdb-memory-management-performance-tuning/) — 深入理解 DuckDB 内存机制
+- [DuckDB 入门：核心优势解析](https://duckdblab.org/zh/post/duckdb-intro-advantages/) — 为什么选择 DuckDB
+- [DuckDB 数据清洗与 ETL 实战](https://duckdblab.org/zh/post/duckdb-data-cleaning-etl/) — 用 DuckDB 构建数据管道
+
 ---
 
 ## 结论
-
 1. **处理 10GB 数据时，DuckDB 平均比 Pandas 快 27 倍，内存减少 98%**
 2. **Pandas 在 1GB 以下数据上仍然是最佳选择**，尤其在需要复杂逐行操作时
 3. **最推荐的方式是 DuckDB + Pandas 混合使用**：DuckDB 负责重活（加载、聚合、过滤），Pandas 负责轻活（可视化、ML 预处理）

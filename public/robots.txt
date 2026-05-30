@@ -1,1 +1,6 @@
 User-agent: *
+Allow: /
+Disallow: /*index.xml$
+Disallow: /*/index.xml$
+
+Sitemap: https://duckdblab.com/sitemap.xml
