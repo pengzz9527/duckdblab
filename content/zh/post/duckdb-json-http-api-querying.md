@@ -6,6 +6,7 @@ draft: false
 description: "无需编写任何 Python 代码，直接用 DuckDB 的 HTTP 扩展和 JSON 函数查询 REST API，将网页数据转化为关系型表格进行分析。附完整 SQL 示例和变现建议。"
 tags: ["DuckDB", "HTTP 扩展", "JSON", "API 查询", "数据工程", "SQL"]
 categories: ["实战教程"]
+image: /images/posts/duckdb-json-http-api-querying/architecture.png
 ---
 
 # DuckDB 直接查询 Web API：HTTP 扩展 + JSON 函数实战

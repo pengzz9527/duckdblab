@@ -6,6 +6,7 @@ draft: false
 description: "Query REST APIs directly with pure SQL using DuckDB's HTTP extension and built-in JSON functions. No Python required. Includes executable examples and monetization tips."
 tags: ["DuckDB", "HTTP Extension", "JSON", "API Querying", "Data Engineering", "SQL"]
 categories: ["Tutorial"]
+image: /images/posts/duckdb-json-http-api-querying/architecture.png
 ---
 
 # Querying Web APIs Directly with DuckDB: HTTP Extension + JSON Functions in Action
