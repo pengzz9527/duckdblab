@@ -292,6 +292,8 @@ Here's the overall architecture flow for querying Web APIs with DuckDB:
 
 ![DuckDB HTTP + JSON Architecture](/images/posts/duckdb-json-http-api-querying/diagram.png)
 
+![Data Pipeline Architecture](/images/posts/duckdb-json-http-api-querying/architecture.png)
+
 ## Comparison Summary with Traditional Tools
 
 | Feature | DuckDB HTTP | Python + requests | Excel Power Query | Tableau Data Connectors |

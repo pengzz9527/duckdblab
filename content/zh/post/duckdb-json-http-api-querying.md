@@ -292,6 +292,8 @@ WHERE date >= '2025-06-01' AND category = 'electronics';
 
 ![DuckDB HTTP + JSON 架构图](/images/posts/duckdb-json-http-api-querying/diagram.png)
 
+![数据管道架构](/images/posts/duckdb-json-http-api-querying/architecture.png)
+
 ## 与传统工具对比总结
 
 | 特性 | DuckDB HTTP | Python + requests | Excel Power Query | Tableau Data Connectors |
