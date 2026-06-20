@@ -11,7 +11,7 @@ image: /images/posts/duckdb-json-http-api-querying/architecture.png
 
 # DuckDB 直接查询 Web API：HTTP 扩展 + JSON 函数实战
 
-在数据分析的日常工作中，我们经常需要从各种 Web API 获取数据——天气预报、股票行情、社交媒体指标、电商平台数据等等。传统做法是写 Python 脚本调用 `requests` 库，解析 JSON，然后导入 Pandas 或写入数据库。但有了 DuckDB 的 HTTP 扩展和内置 JSON 函数，这一切都可以**纯 SQL 完成**。
+在数据分析的日常工作中，我们经常需要从各种 Web API 获取数据——天气预报、股票行情、社交媒体指标、电商平台数据等等。传统做法是写 Python 脚本调用 `requests` 库，解析 JSON，然后导入 Pandas 或写入数据库。但有了 DuckDB 的 httpfs 扩展和内置 JSON 函数，这一切都可以**纯 SQL 完成**。
 
 本文将带你从零开始，掌握用 DuckDB 直接查询 Web API 的完整技能栈。
 
@@ -29,10 +29,16 @@ image: /images/posts/duckdb-json-http-api-querying/architecture.png
 
 ## 环境准备
 
-首先安装 DuckDB 并加载 HTTP 扩展：
+首先安装 DuckDB 并加载 httpfs 扩展：
 
 ```sql
--- 解析嵌套 JSON：电商订单统计
+-- 安装并加载 httpfs 扩展
+INSTALL httpfs;
+LOAD httpfs;
+
+-- 验证扩展是否加载成功
+SELECT * FROM duckdb_extensions() WHERE extension_name = 'httpfs';
+```
 -- 假设 API 返回的是包含 orders 数组的 JSON
 WITH parsed_orders AS (
     SELECT 
@@ -52,38 +58,31 @@ GROUP BY status;
 ```
 
 关键点：
-- `json_extract()` 返回 JSON 值（可用于进一步解析）
-- `read_json_auto()` 自动检测 JSON 结构并返回表格
+- `read_json_auto()` 自动检测 JSON 结构并返回关系型表格
 - `read_csv_auto()` 自动检测 CSV 格式
 - `read_parquet()` 直接读取 Parquet 文件
-- 所有函数都支持 HTTP/HTTPS URL
+- 所有函数都支持 HTTP/HTTPS URL，无需下载文件
+- 使用 `auto_detect=true` 自动推断列类型
 
 ## 核心功能四：直接查询远程 Parquet/CSV 文件
 
 DuckDB 最强大的能力之一是直接查询云存储中的数据文件，无需下载：
 
 ```sql
--- 直接从 URL 读取 Parquet 文件
-SELECT * FROM read_parquet('https://example.com/data/dataset.parquet');
-
--- 读取多个文件（glob 模式）
-SELECT COUNT(*) FROM read_parquet('https://storage.example.com/logs/*.parquet');
+-- 直接读取远程 Parquet 文件（纽约出租车数据，296万行）
+SELECT COUNT(*) FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet');
 
 -- 读取远程 CSV（自动检测分隔符）
-SELECT * FROM read_csv_auto('https://example.com/data/sales.csv');
+SELECT COUNT(*) FROM read_csv_auto('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/datasets.csv');
 
--- 读取远程 JSON 文件
-SELECT * FROM read_json_auto('https://example.com/data/users.json');
-
--- 组合：从 API 获取 Parquet 并分析
+-- 读取远程 JSON 并分页分析
 SELECT 
-    region,
-    SUM(revenue) AS total_revenue,
-    AVG(order_count) AS avg_orders
-FROM read_parquet('https://api.analytics.example.com/export?format=parquet')
-WHERE date >= '2025-01-01'
-GROUP BY region
-ORDER BY total_revenue DESC;
+    passenger_count,
+    COUNT(*) AS trip_count,
+    ROUND(AVG(total_amount), 2) AS avg_amount
+FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet')
+GROUP BY passenger_count
+ORDER BY trip_count DESC;
 ```
 
 ## 实战项目：构建自动化的竞品监控仪表盘
@@ -124,11 +123,10 @@ ORDER BY g.stars DESC;
 
 性能优化技巧
 
-### 1. 缓存 HTTP 响应
+### 1. 缓存 API 响应
 
 频繁查询同一 API 会很浪费。可以用 DuckDB 的临时表来缓存：
 
-```sql
 ```sql
 -- 缓存 API 响应到临时表
 CREATE TEMP TABLE cached_github_repos AS
@@ -153,7 +151,6 @@ ORDER BY stars DESC;
 ### 2. 并行读取多个文件
 
 ```sql
--- 并行读取多个 Parquet 文件（DuckDB 自动并行化）
 -- 并行读取 Parquet 文件（DuckDB 自动并行化）
 SELECT 
     passenger_count,
