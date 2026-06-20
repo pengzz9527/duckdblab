@@ -32,125 +32,31 @@ image: /images/posts/duckdb-json-http-api-querying/architecture.png
 首先安装 DuckDB 并加载 HTTP 扩展：
 
 ```sql
--- 启动 DuckDB
-$ duckdb
-
--- 安装并加载 HTTP 扩展
-INSTALL http;
-LOAD http;
-
--- 查看可用函数
-SHOW ALL FUNCTIONS LIKE '%http%';
-```
-
-## 核心功能一：http_get() 查询 REST API
-
-DuckDB 提供了 `http_get()` 函数，可以直接发起 HTTP GET 请求并返回响应内容作为 BLOB 类型。
-
-### 示例：查询 GitHub API
-
-```sql
--- 加载 HTTP 扩展
-INSTALL http;
-LOAD http;
-
--- 直接查询 GitHub 用户信息
-SELECT 
-    json_extract_scalar(value, '$.login') AS username,
-    json_extract_scalar(value, '$.avatar_url') AS avatar,
-    json_extract_scalar(value, '$.public_repos') AS repos,
-    json_extract_scalar(value, '$.followers') AS followers
-FROM json_each(
-    http_get(
-        'https://api.github.com/repos/duckdb/duckdb',
-        {'headers': {'Accept': 'application/vnd.github.v3+json'}}
-    ),
-    '$.contributors'
-) AS t(value);
-```
-
-这段 SQL 做了以下几件事：
-1. `http_get()` 向 GitHub API 发起请求，获取仓库贡献者列表
-2. `json_each()` 将 JSON 数组展开为多行
-3. `json_extract_scalar()` 从每个 JSON 对象中提取字段
-
-### 示例：查询公开天气 API
-
-```sql
--- 使用 Open-Meteo 免费天气 API（无需 API Key）
-SELECT 
-    json_extract_scalar(value, '$.time') AS date,
-    json_extract_scalar(value, '$.weather_code') AS weather_code,
-    json_extract_scalar(value, '$.temperature_2m_max') AS temp_max,
-    json_extract_scalar(value, '$.temperature_2m_min') AS temp_min,
-    json_extract_scalar(value, '$.precipitation_sum') AS precipitation
-FROM json_each(
-    http_get('https://archive-api.open-meteo.com/v1/archive?latitude=39.9&longitude=116.3&start_date=2025-01-01&end_date=2025-01-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia/Shanghai'),
-    '$.daily.time'
-) AS t(time);
-```
-
-## 核心功能二：http_post() 提交数据
-
-除了 GET 请求，`http_post()` 支持 POST 方法，可以携带请求体和自定义 Header：
-
-```sql
--- POST 请求示例：提交数据到 webhook
-SELECT http_post(
-    'https://hooks.slack.com/services/YOUR/WEBHOOK/URL',
-    '{"text":"DuckDB 报告已生成"}',
-    {'headers': {'Content-Type': 'application/json'}}
-);
-
--- PUT 请求（通过 http_post 模拟）
-SELECT http_post(
-    'https://api.example.com/resource/123',
-    '{"name":"updated","status":"active"}',
-    {'method': 'PUT', 'headers': {'Content-Type': 'application/json'}}
-);
-```
-
-## 核心功能三：嵌套 JSON 解析
-
-现实中的 API 响应往往包含多层嵌套的 JSON。DuckDB 提供了丰富的 JSON 函数来处理这种情况：
-
-```sql
--- 解析多层嵌套的电商 API 响应
-WITH api_response AS (
-    SELECT http_get(
-        'https://api.example.com/orders?limit=100'
-    ) AS raw_data
-),
-parsed_json AS (
+-- 解析嵌套 JSON：电商订单统计
+-- 假设 API 返回的是包含 orders 数组的 JSON
+WITH parsed_orders AS (
     SELECT 
-        json_extract(raw_data, '$.orders') AS orders_json
-    FROM api_response
-),
-order_items AS (
-    SELECT 
-        json_extract_scalar(order_val, '$.id') AS order_id,
-        json_extract_scalar(order_val, '$.customer.name') AS customer_name,
-        json_extract_scalar(order_val, '$.customer.email') AS customer_email,
-        json_extract_scalar(order_val, '$.status') AS status,
-        json_extract_scalar(order_val, '$.total') AS total_amount
-    FROM parsed_json,
-    json_each(parsed_json.orders_json) AS t(order_val)
+        id,
+        customer_name,
+        status,
+        total_amount
+    FROM read_json_auto('https://jsonplaceholder.typicode.com/posts', auto_detect=true)
+    LIMIT 10
 )
 SELECT 
     status,
     COUNT(*) AS order_count,
-    ROUND(SUM(total_amount::DOUBLE), 2) AS total_revenue,
-    ROUND(AVG(total_amount::DOUBLE), 2) AS avg_order_value
-FROM order_items
-GROUP BY status
-ORDER BY total_revenue DESC;
+    ROUND(SUM(total_amount::DOUBLE), 2) AS total
+FROM parsed_orders
+GROUP BY status;
 ```
 
 关键点：
 - `json_extract()` 返回 JSON 值（可用于进一步解析）
-- `json_extract_scalar()` 返回字符串标量
-- `json_each()` 将 JSON 数组展开为多行
-- `json_object_keys()` 获取 JSON 对象的键名
+- `read_json_auto()` 自动检测 JSON 结构并返回表格
+- `read_csv_auto()` 自动检测 CSV 格式
+- `read_parquet()` 直接读取 Parquet 文件
+- 所有函数都支持 HTTP/HTTPS URL
 
 ## 核心功能四：直接查询远程 Parquet/CSV 文件
 
@@ -182,87 +88,65 @@ ORDER BY total_revenue DESC;
 
 ## 实战项目：构建自动化的竞品监控仪表盘
 
-下面是一个完整的实战案例——监控竞争对手的产品评分变化：
+结合多个数据源，构建一个自动化的竞品监控系统：
 
 ```sql
--- Step 1: 从多个数据源聚合
-WITH competitor_data AS (
-    -- 来源1: 应用商店评论 API
-    SELECT 
-        json_extract_scalar(item, '$.product_name') AS product,
-        json_extract_scalar(item, '$.rating') AS rating,
-        json_extract_scalar(item, '$.review_date') AS review_date,
-        json_extract_scalar(item, '$.source') AS source
-    FROM json_each(
-        http_get('https://api.review-tracker.com/v1/products?ids=101,102,103'),
-        '$.reviews'
-    ) AS t(item)
-),
--- 来源2: 社交媒体提及
-social_mentions AS (
-    SELECT 
-        json_extract_scalar(m, '$.mention_text') AS text,
-        json_extract_scalar(m, '$.sentiment') AS sentiment,
-        json_extract_scalar(m, '$.platform') AS platform,
-        json_extract_scalar(m, '$.timestamp') AS mentioned_at
-    FROM json_each(
-        http_get('https://api.social-tracker.com/v1/mentions?q=competitor'),
-        '$.results'
-    ) AS t(m)
-),
--- 合并分析
-analysis AS (
-    SELECT 
-        product,
-        AVG(rating::DOUBLE) AS avg_rating,
-        COUNT(*) AS review_count,
-        MIN(review_date) AS first_review,
-        MAX(review_date) AS last_review
-    FROM competitor_data
-    GROUP BY product
-)
--- 最终输出：按评分排序的竞品列表
+-- 步骤1：从 GitHub API 获取仓库数据
+CREATE TEMP TABLE github_data AS
 SELECT 
-    a.product,
-    a.avg_rating,
-    a.review_count,
-    a.first_review,
-    a.last_review,
-    CASE 
-        WHEN a.avg_rating >= 4.5 THEN '🟢 强势'
-        WHEN a.avg_rating >= 4.0 THEN '🟡 稳定'
-        ELSE '🔴 预警'
-    END AS status
-FROM analysis a
-ORDER BY a.avg_rating DESC;
+    id,
+    name AS repo_name,
+    stargazers_count AS stars,
+    language,
+    updated_at
+FROM read_json_auto('https://jsonplaceholder.typicode.com/posts', auto_detect=true)
+LIMIT 10;
+
+-- 步骤2：从另一个 API 获取评论数据
+CREATE TEMP TABLE review_data AS
+SELECT 
+    id AS review_id,
+    title AS product_name,
+    body AS review_text
+FROM read_json_auto('https://jsonplaceholder.typicode.com/comments', auto_detect=true)
+LIMIT 20;
+
+-- 步骤3：JOIN 分析
+SELECT 
+    g.repo_name,
+    g.stars,
+    COUNT(r.review_id) AS review_count
+FROM github_data g
+LEFT JOIN review_data r ON g.id = r.id
+GROUP BY g.repo_name, g.stars
+ORDER BY g.stars DESC;
 ```
 
-这个查询展示了 DuckDB 在处理多源数据时的优势：
-1. 无需编写 Python 循环来获取多个 API 数据
-2. 所有数据在 SQL 层面即可 JOIN 和聚合
-3. 查询结果可以直接导出为 Parquet 供后续使用
-
-## 性能优化技巧
+性能优化技巧
 
 ### 1. 缓存 HTTP 响应
 
 频繁查询同一 API 会很浪费。可以用 DuckDB 的临时表来缓存：
 
 ```sql
+```sql
 -- 缓存 API 响应到临时表
 CREATE TEMP TABLE cached_github_repos AS
-SELECT * FROM json_each(
-    http_get('https://api.github.com/users/duckdb/repos'),
-    '$[*]'
-) AS t(value);
-
--- 后续分析直接查询缓存
 SELECT 
-    json_extract_scalar(value, '$.name') AS repo_name,
-    json_extract_scalar(value, '$.stargazers_count') AS stars,
-    json_extract_scalar(value, '$.language') AS language
+    id,
+    name AS repo_name,
+    stargazers_count,
+    language,
+    updated_at
+FROM read_json_auto('https://jsonplaceholder.typicode.com/posts', auto_detect=true);
+
+-- 后续分析直接查询缓存表（零网络开销）
+SELECT
+    repo_name,
+    stargazers_count AS stars,
+    language
 FROM cached_github_repos
-WHERE json_extract_scalar(value, '$.stargazers_count')::BIGINT > 1000
+WHERE stargazers_count > 1000
 ORDER BY stars DESC;
 ```
 
@@ -270,22 +154,16 @@ ORDER BY stars DESC;
 
 ```sql
 -- 并行读取多个 Parquet 文件（DuckDB 自动并行化）
+-- 并行读取 Parquet 文件（DuckDB 自动并行化）
 SELECT 
-    file_name,
-    COUNT(*) AS row_count,
-    SUM(size_bytes) AS total_size
-FROM parquet_metadata('s3://bucket/data/*.parquet')
-GROUP BY file_name
-ORDER BY total_size DESC;
+    passenger_count,
+    COUNT(*) AS trip_count,
+    ROUND(AVG(total_amount), 2) AS avg_amount
+FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet')
+GROUP BY passenger_count
+ORDER BY trip_count DESC;
 ```
 
-### 3. 使用谓词下推过滤
-
-```sql
--- 直接在读取时过滤，减少数据传输
-SELECT * FROM read_parquet('https://storage.example.com/large-dataset.parquet')
-WHERE date >= '2025-06-01' AND category = 'electronics';
-```
 
 ## 架构图
 

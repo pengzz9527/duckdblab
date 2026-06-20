@@ -31,85 +31,6 @@ For data analysts and business users who already know SQL, DuckDB's HTTP extensi
 
 First, install DuckDB and load the HTTP extension:
 
-```sql
--- Start DuckDB
-$ duckdb
-
--- Install and load the HTTP extension
-INSTALL http;
-LOAD http;
-
--- View available functions
-SHOW ALL FUNCTIONS LIKE '%http%';
-```
-
-## Feature 1: http_get() — Querying REST APIs
-
-DuckDB provides the `http_get()` function, which can directly make HTTP GET requests and return the response content as a BLOB type.
-
-### Example: Querying the GitHub API
-
-```sql
--- Load HTTP extension
-INSTALL http;
-LOAD http;
-
--- Directly query GitHub repository information
-SELECT 
-    json_extract_scalar(value, '$.login') AS username,
-    json_extract_scalar(value, '$.avatar_url') AS avatar,
-    json_extract_scalar(value, '$.public_repos') AS repos,
-    json_extract_scalar(value, '$.followers') AS followers
-FROM json_each(
-    http_get(
-        'https://api.github.com/repos/duckdb/duckdb',
-        {'headers': {'Accept': 'application/vnd.github.v3+json'}}
-    ),
-    '$.contributors'
-) AS t(value);
-```
-
-This SQL does the following:
-1. `http_get()` makes a request to the GitHub API and retrieves the contributor list
-2. `json_each()` expands the JSON array into multiple rows
-3. `json_extract_scalar()` extracts fields from each JSON object
-
-### Example: Querying a Public Weather API
-
-```sql
--- Using Open-Meteo free weather API (no API key required)
-SELECT 
-    json_extract_scalar(value, '$.time') AS date,
-    json_extract_scalar(value, '$.weather_code') AS weather_code,
-    json_extract_scalar(value, '$.temperature_2m_max') AS temp_max,
-    json_extract_scalar(value, '$.temperature_2m_min') AS temp_min,
-    json_extract_scalar(value, '$.precipitation_sum') AS precipitation
-FROM json_each(
-    http_get('https://archive-api.open-meteo.com/v1/archive?latitude=39.9&longitude=116.3&start_date=2025-01-01&end_date=2025-01-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia/Shanghai'),
-    '$.daily.time'
-) AS t(time);
-```
-
-## Feature 2: http_post() — Submitting Data
-
-Beyond GET requests, `http_post()` supports the POST method with request bodies and custom headers:
-
-```sql
--- POST request example: sending data to a webhook
-SELECT http_post(
-    'https://hooks.slack.com/services/YOUR/WEBHOOK/URL',
-    '{"text":"DuckDB report has been generated"}',
-    {'headers': {'Content-Type': 'application/json'}}
-);
-
--- PUT request (simulated via http_post)
-SELECT http_post(
-    'https://api.example.com/resource/123',
-    '{"name":"updated","status":"active"}',
-    {'method': 'PUT', 'headers': {'Content-Type': 'application/json'}}
-);
-```
-
 ## Feature 3: Nested JSON Parsing
 
 Real-world API responses often contain deeply nested JSON. DuckDB provides a rich set of JSON functions to handle such cases:
@@ -117,9 +38,7 @@ Real-world API responses often contain deeply nested JSON. DuckDB provides a ric
 ```sql
 -- Parse deeply nested e-commerce API response
 WITH api_response AS (
-    SELECT http_get(
-        'https://api.example.com/orders?limit=100'
-    ) AS raw_data
+    SELECT read_json_auto('https://api.example.com/orders?limit=100', auto_detect=true) AS raw_data
 ),
 parsed_json AS (
     SELECT 
@@ -128,13 +47,13 @@ parsed_json AS (
 ),
 order_items AS (
     SELECT 
-        json_extract_scalar(order_val, '$.id') AS order_id,
-        json_extract_scalar(order_val, '$.customer.name') AS customer_name,
-        json_extract_scalar(order_val, '$.customer.email') AS customer_email,
-        json_extract_scalar(order_val, '$.status') AS status,
-        json_extract_scalar(order_val, '$.total') AS total_amount
+        json_value(order_val, '$.id') AS order_id,
+        json_value(order_val, '$.customer.name') AS customer_name,
+        json_value(order_val, '$.customer.email') AS customer_email,
+        json_value(order_val, '$.status') AS status,
+        json_value(order_val, '$.total') AS total_amount
     FROM parsed_json,
-    json_each(parsed_json.orders_json) AS t(order_val)
+    read_json_auto(parsed_json.orders_json) AS t(order_val)
 )
 SELECT 
     status,
@@ -148,8 +67,8 @@ ORDER BY total_revenue DESC;
 
 Key points:
 - `json_extract()` returns a JSON value (usable for further parsing)
-- `json_extract_scalar()` returns a string scalar
-- `json_each()` expands a JSON array into multiple rows
+- `json_value()` returns a string scalar
+- `read_json_auto()` expands a JSON array into multiple rows
 - `json_object_keys()` retrieves the keys of a JSON object
 
 ## Feature 4: Querying Remote Parquet/CSV Files Directly
@@ -189,24 +108,24 @@ Here's a complete real-world example — monitoring competitors' product ratings
 WITH competitor_data AS (
     -- Source 1: App store review API
     SELECT 
-        json_extract_scalar(item, '$.product_name') AS product,
-        json_extract_scalar(item, '$.rating') AS rating,
-        json_extract_scalar(item, '$.review_date') AS review_date,
-        json_extract_scalar(item, '$.source') AS source
-    FROM json_each(
-        http_get('https://api.review-tracker.com/v1/products?ids=101,102,103'),
+        json_value(item, '$.product_name') AS product,
+        json_value(item, '$.rating') AS rating,
+        json_value(item, '$.review_date') AS review_date,
+        json_value(item, '$.source') AS source
+    FROM read_json_auto(
+        read_json_auto('https://api.review-tracker.com/v1/products?ids=101,102,103', auto_detect=true),
         '$.reviews'
     ) AS t(item)
 ),
 -- Source 2: Social media mentions
 social_mentions AS (
     SELECT 
-        json_extract_scalar(m, '$.mention_text') AS text,
-        json_extract_scalar(m, '$.sentiment') AS sentiment,
-        json_extract_scalar(m, '$.platform') AS platform,
-        json_extract_scalar(m, '$.timestamp') AS mentioned_at
-    FROM json_each(
-        http_get('https://api.social-tracker.com/v1/mentions?q=competitor'),
+        json_value(m, '$.mention_text') AS text,
+        json_value(m, '$.sentiment') AS sentiment,
+        json_value(m, '$.platform') AS platform,
+        json_value(m, '$.timestamp') AS mentioned_at
+    FROM read_json_auto(
+        read_json_auto('https://api.social-tracker.com/v1/mentions?q=competitor', auto_detect=true),
         '$.results'
     ) AS t(m)
 ),
@@ -251,18 +170,15 @@ Frequently querying the same API is wasteful. Use DuckDB's temporary tables to c
 ```sql
 -- Cache API response to a temporary table
 CREATE TEMP TABLE cached_github_repos AS
-SELECT * FROM json_each(
-    http_get('https://api.github.com/users/duckdb/repos'),
-    '$[*]'
-) AS t(value);
+SELECT * FROM read_json_auto('https://api.github.com/users/duckdb/repos', auto_detect=true);
 
 -- Subsequent analysis queries the cache directly
 SELECT 
-    json_extract_scalar(value, '$.name') AS repo_name,
-    json_extract_scalar(value, '$.stargazers_count') AS stars,
-    json_extract_scalar(value, '$.language') AS language
+    json_value(value, '$.name') AS repo_name,
+    json_value(value, '$.stargazers_count') AS stars,
+    json_value(value, '$.language') AS language
 FROM cached_github_repos
-WHERE json_extract_scalar(value, '$.stargazers_count')::BIGINT > 1000
+WHERE json_value(value, '$.stargazers_count')::BIGINT > 1000
 ORDER BY stars DESC;
 ```
 
